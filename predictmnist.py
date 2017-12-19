@@ -78,10 +78,13 @@ def getPicArray(filename):
                     im_arr[x][y] = 255
 
     out = Image.fromarray(np.uint8(im_arr))
-    out.save(os.getcwd()+"/convert/" + filename)
+    savePath = os.getcwd()+"/convert/"
+    if not os.path.exists(savePath) :
+       os.mkdir(savePath)
+    out.save(savePath + os.path.basename(filename))
     nm = im_arr.reshape((1, 784))
-    #nm = nm.astype(np.float32)
-    #nm = np.multiply(nm, 1.0 / 255.0)
+    nm = nm.astype(np.float32)
+    nm = np.multiply(nm, 1.0 / 255.0)
     return nm
 
 
