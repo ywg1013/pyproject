@@ -4,6 +4,8 @@ import inputdata
 
 import numpy as np
 
+import os
+
 from PIL import Image
 
 import cv2 as cv
@@ -29,17 +31,34 @@ def max_pool_2x2(x):
     return tf.nn.max_pool(x, ksize=[1, 2, 2, 1],
                           strides=[1, 2, 2, 1], padding='SAME')
 
+def getGray(image_file):
+    tmpls=[]
+    for h in range(0,  image_file.size[1]):#h
+        for w in range(0, image_file.size[0]):#w
+            tmpls.append( image_file.getpixel((w,h)))
+
+    return tmpls
+
+def getAvg(ls):#获取平均灰度值
+    return sum(ls)/len(ls)
 
 def getPicArray(filename):
     im = Image.open(filename)
     x_s = 28
     y_s = 28
+    im = im.convert("L")
     out = im.resize((x_s, y_s), Image.ANTIALIAS)
-    im_arr = np.array(out.convert('L'))
+    #im_arr = np.array(out.convert('L'))
+    im_arr = np.array(out)
 
+    grayls = getGray(out)#灰度集合
+    avg = getAvg(grayls)#灰度平均值
+
+    # print(im_arr)
     num0 = 0
     num255 = 0
     threshold = 100
+    # print(avg)
 
     for x in range(x_s):
         for y in range(y_s):
@@ -48,20 +67,21 @@ def getPicArray(filename):
             else:
                 num0 = num0 + 1
 
-    if (num255 > num0):
-        print("convert!")
+    if num255 > num0:
+        # print("convert!")
         for x in range(x_s):
             for y in range(y_s):
                 im_arr[x][y] = 255 - im_arr[x][y]
-                if (im_arr[x][y] < threshold):  im_arr[x][y] = 0
+                if im_arr[x][y] < threshold:
+                    im_arr[x][y] = 0
+                else:
+                    im_arr[x][y] = 255
 
-    #    out = Image.fromarray(np.uint8(im_arr))
-    #    out.save(filename.split('/')[0] + '/28pix/' + filename.split('/')[1])
-    # print im_arr
+    out = Image.fromarray(np.uint8(im_arr))
+    out.save(os.getcwd()+"/convert/" + filename)
     nm = im_arr.reshape((1, 784))
-    nm = nm.astype(np.float32)
-    nm = np.multiply(nm, 1.0 / 255.0)
-
+    #nm = nm.astype(np.float32)
+    #nm = np.multiply(nm, 1.0 / 255.0)
     return nm
 
 
@@ -108,8 +128,13 @@ init = tf.global_variables_initializer()
 # 启动创建的模型，并初始化变量
 saver = tf.train.Saver()
 
-isTrain = False
 ckpt_dir = "ckpt"
+image_dir = "images"
+
+for root, dirs, files in os.walk(image_dir):
+    print(root)
+    print(dirs)
+    print(files)
 
 with tf.Session() as sess:
     sess.run(init)
@@ -118,20 +143,10 @@ with tf.Session() as sess:
         saver.restore(sess, ckpt.model_checkpoint_path)
         print(ckpt.model_checkpoint_path)
 
-    filename = "images/1.jpg"
-    img = np.array(Image.open(filename))
-    im = cv.imread(filename, cv.IMREAD_GRAYSCALE).astype(np.float32)
-    im = cv.resize(im, (28, 28), interpolation=cv.INTER_CUBIC)
-    # 图片预处理
-    # img_gray = cv.cvtColor(im, cv.COLOR_BGR2GRAY).astype(np.float32)
-    # 数据从0~255转为-0.5~0.5
-    img_gray = (im - (255 / 2.0)) / 255
-    # cv.imshow('out',img_gray)
-    # cv2.waitKey(0)
-    x_img = np.reshape(img_gray, [-1, 784])
-
-    x_img = getPicArray(filename)
-    # print(x_img)
-    output = sess.run(y_conv, feed_dict={x: x_img, keep_prob: 1.0})
-    print("the y_con : %s " % (output))
-    print("the predict is : %d " % (np.argmax(output)))
+    for i in range(len(files)):
+        filename = image_dir + "/" + files[i]
+        x_img = getPicArray(filename)
+        # print(x_img)
+        output = sess.run(y_conv, feed_dict={x: x_img, keep_prob: 1.0})
+        # print("the y_con : %s " % (output))
+        print("%s, the predict is : %d " % (files[i], np.argmax(output)))

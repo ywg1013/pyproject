@@ -77,7 +77,7 @@ accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
 init = tf.global_variables_initializer()
 # 启动创建的模型，并初始化变量
 saver = tf.train.Saver()
-total_step = 5000;
+total_step = 30000;
 
 isTrain = True
 ckpt_dir = "ckpt"
